@@ -19,8 +19,10 @@ static map<int, long> overallCount;
 static map<int, long> overallMemory;
 static map<int, long> overallCode;
 static vector<long> startAddress(18, 0);
+static vector<long> lastAddress(18, 0);
 static vector<int> sizeSoFar(18, 0);
 static vector<bool> wasModify(18, false);
+static vector<bool> wasCode(18, true);
 
 //use this class to pass data to threads and parser
 class SetPointers
@@ -39,21 +41,56 @@ void usage()
 	cout << "pagestats [control file] [output file]\n";
 }
 
-void writeBlockRecord(
+void writeBlockRecord(SetPointers* sets)
+{
+	int threadNo = sets->threadID;
+	map<int, long>::iterator itCount;
+	map<int, long>::iterator itType;
+	int sizeToFind = sizeSoFar[threadNo];
+
+	itCount = sets->lCount->find(sizeToFind);
+	if (itCount == sets->lCount->end() {
+		sets->lCount->insert(pair<int, long>(sizeToFind, 0));
+		itCount = sets->lCount->find(sizeToFind);
+	}
+	itCount->second++;
+	if (wasModify[threadNo] {
+		itCount->second++;
+	}
+
+	if (wasCode[threadNo]) {
+		itType = sets->lCode->find(sizetoFind);
+		if (itType == sets->lCode->end()) {
+			sets->lCode->insert(pair<int, long>(sizeToFind, 0));
+			itType = sets->lCode->find(sizeToFind);
+		}
+		itType->second++;
+	} else {
+		itType = sets->lMemory->find(sizeToFind);
+		if (itType == sets->lMemory->end()) {
+			sets->lMemory->insert(pair<int, long>(sizeToFind, 0));
+			itType = sets->lMemory->find(sizeToFind);
+		}
+		itType->second++;
+		if (wasModify[threadNo]) {
+			itType->second++;
+		}
+	}
+}
 
 static void XMLCALL
 hackHandler(void *data, const XML_Char *name, const XML_Char **attr)
 {
-	
 	SetPointers* sets = static_cast<SetPointers*>(data);
+	int threadNo = sets->threadID;
 	if (strcmp(name, "instruction") == 0 || strcmp(name, "load") == 0 ||
 		strcmp(name, "modify")||strcmp(name, "store") == 0) {
 		bool modify = false;
 		if (strcmp(name, "modify") == 0) {
-			if (!wasModify && lastAddress > 0) {
-				writeBlockRecord(sets, wasCode, countSoFar);
+			if (!wasModify[threadNo] && lastAddress > 0) {
+				writeBlockRecord(sets);
 			}
-			modify = true;
+			wasModify[threadNo] = true;
 		}
 		for (int i = 0; attr[i]; i += 2) {
 			if (strcmp(attr[i], "address") == 0) {
