@@ -23,6 +23,7 @@ static vector<long> lastAddress(18, 0);
 static vector<int> sizeSoFar(18, 0);
 static vector<bool> wasModify(18, false);
 static vector<bool> wasCode(18, true);
+static vector<bool> inAction(18, false);
 
 //use this class to pass data to threads and parser
 class SetPointers
@@ -74,79 +75,55 @@ void writeBlockRecord(SetPointers* sets)
 		itType->second++;
 		if (wasModify[threadNo]) {
 			itType->second++;
+			wasModify[threadNo] == false;
 		}
 	}
+	inAction[threadNo] = false;
 }
 
 static void XMLCALL
 hackHandler(void *data, const XML_Char *name, const XML_Char **attr)
 {
 	SetPointers* sets = static_cast<SetPointers*>(data);
+	long address;
+	int size;
 	int threadNo = sets->threadID;
 	if (strcmp(name, "instruction") == 0 || strcmp(name, "load") == 0 ||
 		strcmp(name, "modify")||strcmp(name, "store") == 0) {
 		bool modify = false;
-		if (strcmp(name, "modify") == 0) {
-			if (!wasModify[threadNo] && lastAddress > 0) {
+		if (strcmp(name, "modify") == 0 && inAction[threadNo]) {
+			if (!wasModify[threadNo]) {
 				writeBlockRecord(sets);
 			}
 			wasModify[threadNo] = true;
 		}
 		for (int i = 0; attr[i]; i += 2) {
 			if (strcmp(attr[i], "address") == 0) {
-				long address = strtol(attr[i+1], NULL, 16);
-				int segment = (address >> 4) & 0xFF;
-				map<int, int>::iterator itLocal;
-
-				itLocal = sets->lCount->find(segment);
-				if (itLocal != sets->lCount->end()) {
-					itLocal->second++;
-					if (modify) {
-						itLocal->second++;
-					}
-				} else {
-					if (!modify) {
-						sets->lCount->
-						insert(
-						pair<int, int>(segment, 1));
-					} else {
-						sets->lCount->
-						insert(
-						pair<int, int>(segment, 2));
-					}
-				}
-
-				if (strcmp(name, "instruction") == 0) {
-					itLocal = sets->lCode->find(segment);
-					if (itLocal != sets->lCode->end()) {
-						itLocal->second++;
-					} else {
-						sets->lCode->
-						insert(
-						pair<int, int>(segment, 1));
-					}
-				} else {
-					itLocal = sets->lMemory->find(segment);
-					if (itLocal != sets->lMemory->end()) {
-						itLocal->second++;
-						if (modify) {
-							itLocal->second++;
-						}
-					} else {
-						if (!modify) {
-							sets->lMemory->
-							insert(pair<int, int>
-							(segment, 1));
-						} else {
-							sets->lMemory->
-							insert(pair<int, int>
-							(segment, 2));
-						}
-					}
-				}
+				address = strtol(attr[i + 1], NULL, 16);
+			} else if (strcmp(attr[i], "size") == 0) {
+				size = strtol(attr[i + 1], NULL, 16);
 			}
 		}
-	}		
+		if (inAction[threadNo]) {
+			if (address != lastAddress[threadNo] + 1) {
+				writeBlockRecord(sets);
+			} else if (strcmp(name, "instruction") == 0 &&
+				!wasCode[threadNo]) {
+				writeBlockRecord(sets);
+			} else {
+				sizeSoFar[threadNo] += size;
+				lastAddress[threadNo] += size;	
+		} else {
+			inAction[threadNo] = true;
+			lastAddress[threadNo] = address + size;
+			sizeSoFar[threadNo] = size;
+			if (strcmp(name, "instruction" == 0)) {
+				wasCode[threadNo] = true;
+			} else {
+				wasCode[threadNo] = false;
+			}
+		}
+	}
 }
 
 static void* hackMemory(void* tSets)
@@ -186,8 +163,8 @@ static void* hackMemory(void* tSets)
 
 	pthread_mutex_lock(&countLock);
 	cout << "Thread handled \n";
-	map<int, int>::iterator itLocal;
-	map<int, int>::iterator itGlobal;
+	map<int, long>::iterator itLocal;
+	map<int, long>::iterator itGlobal;
 
 	for (itLocal = threadSets->lCount->begin();
 		itLocal != threadSets->lCount->end(); itLocal++) {
@@ -196,7 +173,7 @@ static void* hackMemory(void* tSets)
 		if (itGlobal != overallCount.end()){
 			itGlobal->second += itLocal->second;
 		} else {
-			overallCount.insert(pair<int, int>(
+			overallCount.insert(pair<int, long>(
 				itLocal->first, itLocal->second));
 		}
 	}
@@ -208,7 +185,7 @@ static void* hackMemory(void* tSets)
 		if (itGlobal != overallMemory.end()){
 			itGlobal->second += itLocal->second;
 		} else {
-			overallMemory.insert(pair<int, int>(
+			overallMemory.insert(pair<int, long>(
 				itLocal->first, itLocal->second));
 		}
 	}
@@ -220,7 +197,7 @@ static void* hackMemory(void* tSets)
 		if (itGlobal != overallCode.end()){
 			itGlobal->second += itLocal->second;
 		} else {
-			overallCode.insert(pair<int, int>(
+			overallCode.insert(pair<int, long>(
 				itLocal->first, itLocal->second));
 		}
 	}
@@ -239,9 +216,9 @@ countThread(int threadID, char* threadPath)
 	cout << "Handling thread " << threadID << "\n";
 	//parse each file in parallel
 	SetPointers* threadSets = new SetPointers();
-	threadSets->lCount = new map<int, int>();
-	threadSets->lMemory = new map<int, int>();
-	threadSets->lCode = new map<int, int>();
+	threadSets->lCount = new map<int, long>();
+	threadSets->lMemory = new map<int, long>();
+	threadSets->lCode = new map<int, long>();
 	threadSets->threadPath = threadPath;
 	threadSets->threadID = threadID;
 	
@@ -346,21 +323,21 @@ int main(int argc, char* argv[])
 	ofstream memoryFile;
 	ofstream codeFile;
 	
-	overallFile.open("~/overallmem.txt");
+	overallFile.open(arv[2]);
 	for (it = overallCount.begin(); it != overallCount.end(); it++)
 	{
 		overallFile << it->first << "," << it->second << "\n";
 	}
 	overallFile.close();
 
-	memoryFile.open("~/memonly.txt");
+	memoryFile.open("memallocs.txt");
 	for (it = overallMemory.begin(); it != overallMemory.end(); it++)
 	{
 		memoryFile << it->first << "," << it->second << "\n";
 	}
 	memoryFile.close();
 
-	codeFile.open("~/codeonly.txt");
+	codeFile.open("codeallocs.txt");
 	for (it = overallCode.begin(); it != overallCode.end(); it++)
 	{
 		codeFile << it->first << "," << it->second << "\n";
