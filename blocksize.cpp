@@ -323,21 +323,21 @@ int main(int argc, char* argv[])
 	ofstream memoryFile;
 	ofstream codeFile;
 	
-	overallFile.open(argv[2]);
+	overallFile.open("/usr/userfs/a/acm538/overallocs.txt");
 	for (it = overallCount.begin(); it != overallCount.end(); it++)
 	{
 		overallFile << it->first << "," << it->second << "\n";
 	}
 	overallFile.close();
 
-	memoryFile.open("memallocs.txt");
+	memoryFile.open("/usr/userfs/a/acm538/memallocs.txt");
 	for (it = overallMemory.begin(); it != overallMemory.end(); it++)
 	{
 		memoryFile << it->first << "," << it->second << "\n";
 	}
 	memoryFile.close();
 
-	codeFile.open("codeallocs.txt");
+	codeFile.open("/usr/userfs/a/acm538/codeallocs.txt");
 	for (it = overallCode.begin(); it != overallCode.end(); it++)
 	{
 		codeFile << it->first << "," << it->second << "\n";
