@@ -50,12 +50,12 @@ void writeBlockRecord(SetPointers* sets)
 	int sizeToFind = sizeSoFar[threadNo];
 
 	itCount = sets->lCount->find(sizeToFind);
-	if (itCount == sets->lCount->end() {
+	if (itCount == sets->lCount->end()) {
 		sets->lCount->insert(pair<int, long>(sizeToFind, 0));
 		itCount = sets->lCount->find(sizeToFind);
 	}
 	itCount->second++;
-	if (wasModify[threadNo] {
+	if (wasModify[threadNo]) {
 		itCount->second++;
 	}
 
@@ -112,7 +112,8 @@ hackHandler(void *data, const XML_Char *name, const XML_Char **attr)
 				writeBlockRecord(sets);
 			} else {
 				sizeSoFar[threadNo] += size;
-				lastAddress[threadNo] += size;	
+				lastAddress[threadNo] += size;
+			}	
 		} else {
 			inAction[threadNo] = true;
 			lastAddress[threadNo] = address + size;
