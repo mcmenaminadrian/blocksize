@@ -85,8 +85,8 @@ static void XMLCALL
 hackHandler(void *data, const XML_Char *name, const XML_Char **attr)
 {
 	SetPointers* sets = static_cast<SetPointers*>(data);
-	long address;
-	int size;
+	long address(0);
+	int size(0);
 	int threadNo = sets->threadID;
 	if (strcmp(name, "instruction") == 0 || strcmp(name, "load") == 0 ||
 		strcmp(name, "modify")||strcmp(name, "store") == 0) {
