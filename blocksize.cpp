@@ -60,7 +60,7 @@ void writeBlockRecord(SetPointers* sets)
 	}
 
 	if (wasCode[threadNo]) {
-		itType = sets->lCode->find(sizetoFind);
+		itType = sets->lCode->find(sizeToFind);
 		if (itType == sets->lCode->end()) {
 			sets->lCode->insert(pair<int, long>(sizeToFind, 0));
 			itType = sets->lCode->find(sizeToFind);
@@ -75,7 +75,7 @@ void writeBlockRecord(SetPointers* sets)
 		itType->second++;
 		if (wasModify[threadNo]) {
 			itType->second++;
-			wasModify[threadNo] == false;
+			wasModify[threadNo] = false;
 		}
 	}
 	inAction[threadNo] = false;
@@ -90,7 +90,6 @@ hackHandler(void *data, const XML_Char *name, const XML_Char **attr)
 	int threadNo = sets->threadID;
 	if (strcmp(name, "instruction") == 0 || strcmp(name, "load") == 0 ||
 		strcmp(name, "modify")||strcmp(name, "store") == 0) {
-		bool modify = false;
 		if (strcmp(name, "modify") == 0 && inAction[threadNo]) {
 			if (!wasModify[threadNo]) {
 				writeBlockRecord(sets);
@@ -118,7 +117,7 @@ hackHandler(void *data, const XML_Char *name, const XML_Char **attr)
 			inAction[threadNo] = true;
 			lastAddress[threadNo] = address + size;
 			sizeSoFar[threadNo] = size;
-			if (strcmp(name, "instruction" == 0)) {
+			if (strcmp(name, "instruction") == 0) {
 				wasCode[threadNo] = true;
 			} else {
 				wasCode[threadNo] = false;
@@ -319,12 +318,12 @@ int main(int argc, char* argv[])
 	for_each(threads.begin(), threads.end(), joinup);
 	for_each(threads.begin(), threads.end(), killoff);
 	
-	map<int, int>::iterator it;
+	map<int, long>::iterator it;
 	ofstream overallFile;
 	ofstream memoryFile;
 	ofstream codeFile;
 	
-	overallFile.open(arv[2]);
+	overallFile.open(argv[2]);
 	for (it = overallCount.begin(); it != overallCount.end(); it++)
 	{
 		overallFile << it->first << "," << it->second << "\n";
